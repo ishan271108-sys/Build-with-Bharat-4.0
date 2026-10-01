@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SmartChowk | Edge-AI Adaptive Traffic Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#EDF1F4;--ink:#13202A;--muted:#51606C;--line:#C9D2D9;--panel:#fff;--green:#1F9D55;--amber:#E3A000;--red:#D6343A;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F171D;--ink:#E7EDF1;--muted:#9AA9B4;--line:#28353F;--panel:#162029;--green:#37c57a;--amber:#f2b52a;--red:#ef5b60}}
+:root[data-theme="dark"]{--bg:#0F171D;--ink:#E7EDF1;--muted:#9AA9B4;--line:#28353F;--panel:#162029;--green:#37c57a;--amber:#f2b52a;--red:#ef5b60}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.6 "IBM Plex Sans",system-ui,sans-serif}
+.w{max-width:1080px;margin:0 auto;padding:0 20px}
+h1,h2,h3{font-family:"Archivo",Impact,sans-serif;font-stretch:78%;font-weight:800;line-height:1.02;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(46px,9vw,104px)}
+h2{font-size:clamp(32px,5vw,52px);margin-bottom:18px}
+h3{font-size:24px;font-stretch:90%;font-weight:700;line-height:1.2;margin-bottom:6px}
+p{margin:0 0 14px;max-width:62ch}
+nav{display:flex;gap:20px;align-items:center;padding:16px 0;font-size:15px;flex-wrap:wrap}
+nav b{font-family:"Archivo",sans-serif;font-stretch:78%;font-weight:800;font-size:22px;margin-right:auto}
+nav a{color:var(--muted);text-decoration:none}nav a:hover,nav a:focus-visible{color:var(--ink);text-decoration:underline}
+:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+.hero{padding:28px 0 36px}
+.hero p{font-size:20px;margin-top:20px;color:var(--muted)}
+.sim{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px;margin-top:8px}
+.ctl{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:end;margin-bottom:16px;font-size:15px}
+.ctl label{display:flex;flex-direction:column;gap:4px;min-width:170px}
+.ctl output{font-weight:600}
+input[type=range]{width:100%;accent-color:var(--green)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button,.rs{font:inherit;font-size:14px;background:none;color:var(--ink);border:0;padding:7px 12px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.rs{border:1px solid var(--line);border-radius:4px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.pair{grid-template-columns:1fr}}
+.cell h3{display:flex;justify-content:space-between;align-items:baseline;font-size:21px}
+.cell h3 span{font:500 13px "IBM Plex Sans",sans-serif;color:var(--muted)}
+canvas{width:100%;height:auto;aspect-ratio:1;border-radius:4px;display:block;background:#1d2830}
+dl.m{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 0}
+dl.m div{border-top:3px solid var(--line);padding-top:6px}
+dl.m dt{font-size:13px;color:var(--muted)}dl.m dd{margin:0;font:700 26px "Archivo",sans-serif;font-stretch:85%}
+.cell.ad dl.m div{border-color:var(--green)}
+.verdict{margin:16px 0 0;font-weight:600;min-height:1.6em}
+.note{font-size:13px;color:var(--muted);margin:6px 0 0}
+section{padding:56px 0;border-top:1px solid var(--line)}
+.prob{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px 40px;margin-top:26px}
+.prob p{margin:0;color:var(--muted)}
+ol.flow{list-style:none;padding:0;margin:26px 0 0;display:grid;gap:0;counter-reset:s}
+ol.flow li{counter-increment:s;display:grid;grid-template-columns:56px 1fr;gap:6px 16px;padding:18px 0;border-top:1px solid var(--line)}
+ol.flow li::before{content:counter(s);font:800 40px/1 "Archivo",sans-serif;font-stretch:78%;color:var(--green)}
+ol.flow p{margin:0;color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:15.5px;margin-top:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:14px}
+.sc{overflow-x:auto}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px;overflow-x:auto;font:14px/1.55 ui-monospace,Menlo,Consolas,monospace;margin:14px 0 0}
+.chip{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:3px 12px;margin:0 6px 8px 0;font-size:14.5px;background:var(--panel)}
+.badge{display:inline-block;border:1px solid var(--line);background:var(--panel);border-radius:99px;padding:3px 14px;font-size:14.5px;margin-bottom:18px}
+.con{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px}
+.card p{font-size:15px;color:var(--muted)}
+.tlb{display:flex;gap:16px;justify-content:center;background:#0b1217;border-radius:6px;padding:16px;margin:12px 0}
+.tlb i{width:44px;height:44px;border-radius:50%;background:#334155;opacity:.3;transition:opacity .2s}
+.tlb i.on{opacity:1}#lr.on{background:var(--red);box-shadow:0 0 18px var(--red)}#ly.on{background:var(--amber);box-shadow:0 0 18px var(--amber)}#lg.on{background:var(--green);box-shadow:0 0 18px var(--green)}
+.tm{font:800 44px/1 "Archivo",sans-serif;font-stretch:80%;text-align:center}
+.mt{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+.mt b{text-align:right}
+.bd{padding:1px 12px;border-radius:99px;font-size:13.5px;color:#fff;background:var(--green)}.bd.m{background:var(--amber);color:#111}.bd.h{background:var(--red)}
+.btn{width:100%;padding:12px;background:var(--red);color:#fff;border:0;border-radius:6px;font:600 16px "IBM Plex Sans",sans-serif;cursor:pointer;margin-top:6px}
+ul.refs{padding-left:20px;margin:12px 0 0}ul.refs li{margin-bottom:10px;max-width:70ch;font-size:15.5px}ul.refs a{color:var(--ink);word-break:break-word}
+footer{padding:36px 0 48px;border-top:1px solid var(--line);color:var(--muted);font-size:14.5px}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="w">
+<nav><b>SmartChowk</b><a href="#console">Live console</a><a href="#problem">Problem</a><a href="#how">How it works</a><a href="#weights">Weighted density</a><a href="#edge">Why edge</a><a href="#plan">Roadmap</a><a href="#team">Team</a></nav>
+
+<header class="hero">
+<div class="badge">Team Echo Innovators, Galgotias University, Build with Bharat 4.0</div>
+<h1>Signals that count what is actually on the road.</h1>
+<p>SmartChowk is an adaptive Edge-AI traffic signal controller built for Indian mixed traffic. Queue sensors and YOLOv8 vision set green time to 15, 25 or 35 seconds, an ESP32 running FreeRTOS drives the signal, and a 433 MHz RF override clears the way for ambulances.</p>
+</header>
+
+<div class="sim" id="sim">
+<div class="ctl">
+<label>Traffic volume <output id="o1">5</output><input id="dens" type="range" min="1" max="10" value="5" aria-label="Traffic volume"></label>
+<label>East-west share of traffic <output id="o2">65%</output><input id="ew" type="range" min="20" max="80" value="65" aria-label="East-west share"></label>
+<div><div style="font-size:13px;color:var(--muted);margin-bottom:4px">Sim speed</div><div class="seg" id="spd"><button aria-pressed="false" data-s="1">1x</button><button aria-pressed="true" data-s="4">4x</button><button aria-pressed="false" data-s="8">8x</button></div></div>
+<button class="rs" id="rst">Restart both</button>
+</div>
+<div class="pair">
+<div class="cell"><h3>Fixed timer <span>20 s green each way</span></h3><canvas id="c1" width="340" height="340" aria-label="Fixed timer intersection simulation"></canvas>
+<dl class="m"><div><dt>Avg wait</dt><dd id="w1">0s</dd></div><div><dt>Cleared</dt><dd id="d1">0</dd></div><div><dt>Queue (PCU)</dt><dd id="q1">0</dd></div></dl></div>
+<div class="cell ad"><h3>Edge-AI adaptive <span>15 / 25 / 35 s by queue</span></h3><canvas id="c2" width="340" height="340" aria-label="Adaptive intersection simulation"></canvas>
+<dl class="m"><div><dt>Avg wait</dt><dd id="w2">0s</dd></div><div><dt>Cleared</dt><dd id="d2">0</dd></div><div><dt>Queue (PCU)</dt><dd id="q2">0</dd></div></dl></div>
+</div>
+<p class="verdict" id="vd" aria-live="polite"></p>
+<p class="note">Both intersections receive the exact same random arrivals. Mixed traffic: two-wheelers (amber), autos (teal), cars (blue), buses (red), trucks (brown), ambulances (white). Green boxes show what the adaptive camera is counting, and the dots beside each road are the IR sensors at 25, 60 and 100 m, lit when the queue reaches them. This is a simplified simulation, not field data.</p>
+</div>
+
+<section id="console">
+<h2>Junction console</h2>
+<p>Live readout from the adaptive controller in the simulation above.</p>
+<div class="con">
+<div class="card"><h3>Signal actuation</h3><div class="tlb"><i id="lr"></i><i id="ly"></i><i id="lg"></i></div><div class="tm" id="tm">0s</div><p class="note" id="ph" style="text-align:center">Waiting</p></div>
+<div class="card"><h3>Junction telemetry</h3>
+<div class="mt"><span>Queue density</span><b id="dn" class="bd">LOW</b></div>
+<div class="mt"><span>Sensors triggered (N / S / E / W, of 3)</span><b id="aq">0 / 0 / 0 / 0</b></div>
+<div class="mt"><span>Green allocated</span><b id="ga">25s</b></div>
+<div class="mt"><span>Weighted queue (vision)</span><b id="tq">0 PCU</b></div>
+<div class="mt"><span>Detected by YOLOv8</span><b id="mx">none</b></div>
+<div class="mt"><span>Vision node</span><b>Raspberry Pi 5 (edge)</b></div>
+<div class="mt"><span>Signal controller</span><b>ESP32 (FreeRTOS)</b></div></div>
+<div class="card"><h3>Emergency override</h3><p>Simulates a 433 MHz RF signal from an ambulance or fire engine. SmartChowk clears a green corridor, while the fixed timer makes the ambulance wait its turn.</p><button class="btn" id="emg">Trigger ambulance override</button><p class="verdict" id="es" aria-live="polite" style="font-size:15px"></p></div>
+</div>
+</section>
+
+<section id="problem">
+<h2>The problem at the junction</h2>
+<p>New Delhi records 60.2% congestion and 104 hours lost in rush-hour traffic (TomTom Traffic Index 2025).</p>
+<div class="prob">
+<div><h3>Timers ignore demand</h3><p>Fixed-cycle signals run the same plan whether the road is empty or jammed, so green time is wasted on empty approaches while queues grow on busy ones.</p></div>
+<div><h3>Traffic keeps changing</h3><p>Volume shifts by hour, weekday and city event. A single timing plan cannot follow it.</p></div>
+<div><h3>Mixed traffic breaks standard models</h3><p>Two-wheelers, autos, cars, buses and trucks share the same lanes. Global models and basic sensors assume cleaner, car-only flow.</p></div>
+<div><h3>People and air pay for it</h3><p>Long gridlocks mean idling engines, wasted fuel and worse urban air quality.</p></div>
+<div><h3>Current automation has gaps</h3><p>Cloud systems add latency, raise privacy concerns and fail when the internet drops. Pixel-counting gets fooled by shadows and weather.</p></div>
+<div><h3>Our approach</h3><p>Run detection on the device at the intersection, count vehicles by type, and let queue length and weighted density decide the signal.</p></div>
+</div>
+</section>
+
+<section id="how">
+<h2>How it works</h2>
+<p>Every decision happens at the intersection, with no round trip to a server.</p>
+<ol class="flow">
+<li><div><h3>Overhead camera and sensors</h3><p>A live lane feed goes to the embedded board, while IR sensors at 25, 60 and 100 m mark how far the queue reaches.</p></div></li>
+<li><div><h3>YOLOv8 detection</h3><p>Detects and classifies two-wheelers, autos, cars, buses and trucks, robust to shadows and weather because it recognises objects, not pixel changes.</p></div></li>
+<li><div><h3>Queue and density estimate</h3><p>Vehicles inside each approach's detection zone are counted and weighted by size into one number per approach.</p></div></li>
+<li><div><h3>Adaptive controller</h3><p>Triggered sensors map to LOW, MED or HIGH density, which sets a 15, 25 or 35 second green. A lane that empties early hands over sooner.</p></div></li>
+<li><div><h3>ESP32 signal controller</h3><p>The density class goes to an ESP32 running FreeRTOS, which switches the relay driving the signal heads and enforces amber and all-red clearance. If vision is obstructed, the ESP32 falls back to a fixed timer on its own.</p></div></li>
+</ol>
+</section>
+
+<section id="why">
+<h2>Why it stands out</h2>
+<div class="con">
+<div class="card"><h3>Adaptive</h3><p>Green time steps through 15, 25 and 35 seconds as the measured queue grows, so timing follows real demand.</p></div>
+<div class="card"><h3>Low-cost</h3><p>The working prototype costs ₹1,680 and uses off-the-shelf parts. Sensor trigger, density class, signal change: simple to demo.</p></div>
+<div class="card"><h3>Deployable</h3><p>Surface-mounted sensing needs no road excavation, and the RF override makes the junction emergency-ready.</p></div>
+</div>
+</section>
+
+<section id="weights">
+<h2>From queue to green time</h2>
+<div class="two">
+<div>
+<p>The prototype reads the queue with three IR sensors. The vision layer refines it: a bus takes far more road than a scooter, so YOLOv8 counts each class with a passenger car unit (PCU) weight.</p>
+<div class="sc"><table><thead><tr><th>Class</th><th>PCU weight</th></tr></thead><tbody>
+<tr><td>Two-wheeler</td><td>0.5</td></tr><tr><td>Auto-rickshaw</td><td>0.75</td></tr><tr><td>Car</td><td>1.0</td></tr><tr><td>Bus</td><td>2.2</td></tr><tr><td>Truck</td><td>2.5</td></tr></tbody></table></div>
+<p class="note">Illustrative values. Calibrate them with local counts before deployment.</p>
+</div>
+<div>
+<h3>Phase decision rule</h3>
+<p>The same rule runs in the simulator above.</p>
+<pre>sensors S1 S2 S3 at 25 / 60 / 100 m
+
+1 triggered -> LOW  -> 15 s green
+2 triggered -> MED  -> 25 s green
+3 triggered -> HIGH -> 35 s green
+
+early switch when the green lane empties
+always: amber 2 s, then all-red 1.5 s
+433 MHz RF interrupt -> preemption</pre>
+</div>
+</div>
+</section>
+
+<section id="edge">
+<h2>Why run it at the edge</h2>
+<div class="sc"><table><thead><tr><th>Feature</th><th>Fixed-time</th><th>Cloud AI cameras</th><th>SmartChowk</th></tr></thead><tbody>
+<tr><th>Responds to live queue</th><td>No</td><td>Yes</td><td>Yes</td></tr>
+<tr><th>Works offline / local</th><td>Yes</td><td>No</td><td>Yes</td></tr>
+<tr><th>Mixed-traffic aware</th><td>No</td><td>Partly</td><td>Yes</td></tr>
+<tr><th>Emergency preemption</th><td>No</td><td>Varies</td><td>Yes (RF)</td></tr>
+<tr><th>Low-cost prototype</th><td>Yes</td><td>No</td><td>Yes (₹1,680)</td></tr>
+</tbody></table></div>
+<h3 style="margin-top:30px">Four-layer architecture</h3>
+<div class="sc"><table><thead><tr><th>Layer</th><th>Tools</th></tr></thead><tbody>
+<tr><td>Dashboard / simulation</td><td>HTML5, JS, Web Audio API</td></tr>
+<tr><td>IoT / cloud (optional)</td><td>MQTT, JSON telemetry</td></tr>
+<tr><td>Edge AI</td><td>Arduino, YOLOv8</td></tr>
+<tr><td>Firmware</td><td>C++, FreeRTOS, Arduino IDE</td></tr>
+<tr><td>Hardware</td><td>ESP32, IR sensors, RF receiver, LCD</td></tr>
+</tbody></table></div>
+<p class="note">Open-source tools, low-cost parts, edge-first inference and a modular design that scales per junction.</p>
+</section>
+
+<section id="plan">
+<h2>Roadmap and impact</h2>
+<div class="two">
+<div>
+<h3>Next four steps</h3>
+<ol class="flow" style="margin-top:12px">
+<li><div><h3>Calibrate</h3><p>Camera height, lane ROIs and queue thresholds.</p></div></li>
+<li><div><h3>Validate</h3><p>Test detection accuracy on Indian mixed traffic.</p></div></li>
+<li><div><h3>Close the loop</h3><p>YOLOv8 to Arduino to the signal controller model.</p></div></li>
+<li><div><h3>Pilot</h3><p>Run controlled junction tests and log delay and queue metrics.</p></div></li>
+</ol>
+<p class="note">Evidence to collect: mean delay, 95th-percentile wait, queue length, false detections.</p>
+</div>
+<div>
+<h3>What it changes</h3>
+<p>Shorter waits and shorter queues, so less idling and less fuel burned at the junction.</p>
+<p>Lower emissions where people actually breathe: at the stop line.</p>
+<p>No continuous video upload, so privacy is built in, and the junction keeps working offline.</p>
+<p>Low cost per intersection makes city-wide rollout realistic.</p>
+<p>Ambulances and fire engines get a green corridor through a local 433 MHz override.</p>
+</div>
+</div>
+</section>
+<section id="team">
+<h2>Team Echo Innovators</h2>
+<p>Galgotias University, Greater Noida. Problem statement: adaptive traffic signal control.</p>
+<span class="chip">Anmol (Leader)</span><span class="chip">Anamika Tanwar</span><span class="chip">Aastha Kapoor</span><span class="chip">Palak Tomar</span><span class="chip">Ishan</span>
+<h3 style="margin-top:30px">Research and references</h3>
+<ul class="refs">
+<li>TomTom Traffic Index 2025, New Delhi: <a href="https://www.tomtom.com/traffic-index/city/new-delhi/">tomtom.com/traffic-index/city/new-delhi</a></li>
+<li>FHWA, Traffic Signal Timing Manual, Chapter 9 (adaptive control): <a href="https://ops.fhwa.dot.gov/publications/fhwahop08024/chapter9.htm">ops.fhwa.dot.gov</a></li>
+<li>Ultralytics, YOLOv8 documentation: <a href="https://docs.ultralytics.com/models/yolov8/">docs.ultralytics.com/models/yolov8</a></li>
+<li>C-DAC, CoSiCoSt-EnV, Indian adaptive control for non-lane-based mixed traffic: <a href="https://cdac.gov.in/index.aspx?id=product_details&amp;productId=CoSiCoStEnV%28CompositeSignalControlStrategyEnhancedVersion%29">cdac.gov.in</a></li>
+</ul>
+</section>
+<footer>SmartChowk by Echo Innovators, Galgotias University, Greater Noida. Built for Build with Bharat 4.0.</footer>
+</div>
+
+<script>
+(function(){
+var SL=24,FAR=170,C=170,H=0.1,SPD=34;
+var AMB={pcu:1,w:8,l:16,c:'#ffffff',p:0,amb:1};
+var T=[{pcu:.5,w:4,l:9,c:'#f2a900',p:.38},{pcu:.75,w:7,l:11,c:'#2f9e8f',p:.14},{pcu:1,w:8,l:15,c:'#5b7aa6',p:.34},{pcu:2.2,w:10,l:28,c:'#d6343a',p:.07},{pcu:2.5,w:10,l:32,c:'#8a6a47',p:.07}];
+function mk(ad){return{ad:ad,lanes:[[],[],[],[]],ph:0,st:'g',el:0,done:0,wsum:0,pre:null,ambW:null,alloc:25}}
+var A,B,speed=4,ctx1=document.getElementById('c1').getContext('2d'),ctx2=document.getElementById('c2').getContext('2d');
+function reset(){A=mk(false);B=mk(true);emgName=null}
+function inPh(s,l){return (l<2?0:1)===s.ph}
+var TH=[30,72,120];
+function ext(s,l){var e=0;s.lanes[l].forEach(function(v){if(v.pos>SL&&v.pos<SL+150)e=Math.max(e,v.pos+v.l-SL)});return e}
+function cnt(s,l){var e=ext(s,l),n=0;TH.forEach(function(t){if(e>=t)n++});return n}
+function sens(s,ph){return Math.max(cnt(s,ph*2),cnt(s,ph*2+1))}
+function q(s,ph){var t=0;for(var l=ph*2;l<ph*2+2;l++)s.lanes[l].forEach(function(v){if(v.pos>SL&&v.pos<SL+150)t+=v.t.pcu});return t}
+function step(s,arr){
+ s.el+=H;
+ if(s.st==='g'){
+  var my=q(s,s.ph),ot=q(s,1-s.ph),sw=false;
+  if(s.ad&&s.pre!==null){if(s.ph!==s.pre)sw=true;else{var hold=false;for(var l2=s.pre*2;l2<s.pre*2+2;l2++)s.lanes[l2].forEach(function(v){if(v.amb&&v.pos>SL)hold=true});if(!hold)s.pre=null}}
+  else if(!s.ad){sw=s.el>=20}
+  else{ if(ot>0&&(s.el>=s.alloc||(s.el>=5&&my===0)))sw=true }
+  if(sw){s.st='y';s.el=0}
+ }else if(s.st==='y'){if(s.el>=2){s.st='r';s.el=0}}
+ else if(s.el>=1.5){s.ph=1-s.ph;s.st='g';s.el=0;s.alloc=[15,15,25,35][sens(s,s.ph)]}
+ arr.forEach(function(a){var L=s.lanes[a[0]],last=L[L.length-1];if(!last||last.pos+last.l+3<=FAR)L.push({pos:FAR,t:a[1],l:a[1].l,w:0,amb:!!a[1].amb})});
+ for(var l=0;l<4;l++){
+  var L=s.lanes[l],go=s.st==='g'&&inPh(s,l);
+  for(var i=0;i<L.length;i++){
+   var v=L[i],np=v.pos-SPD*H,lim=-1e9;
+   if(i>0)lim=L[i-1].pos+L[i-1].l+3;
+   if(!go&&v.pos>=SL-.01)lim=Math.max(lim,SL);
+   np=Math.max(np,lim);if(np>v.pos)np=v.pos;
+   if(v.pos-np<.01&&v.pos>=SL-.01)v.w+=H;
+   v.pos=np;
+  }
+  while(L.length&&L[0].pos<-FAR-40){s.done++;s.wsum+=L[0].w;if(L[0].amb)s.ambW=L[0].w;L.shift()}
+ }
+}
+function xy(l,v){var p=v.pos,w=v.t.w,L=v.l;
+ if(l===0)return[C+11-w/2,C-p-L,w,L];
+ if(l===1)return[C-11-w/2,C+p,w,L];
+ if(l===2)return[C+p,C+11-w/2,L,w];
+ return[C-p-L,C-11-w/2,L,w]}
+function draw(s,x){
+ x.fillStyle='#1d2830';x.fillRect(0,0,340,340);
+ x.fillStyle='#2f3b45';x.fillRect(C-24,0,48,340);x.fillRect(0,C-24,340,48);
+ x.strokeStyle='#8d9aa5';x.setLineDash([8,8]);x.lineWidth=1;
+ x.beginPath();x.moveTo(C,0);x.lineTo(C,C-24);x.moveTo(C,C+24);x.lineTo(C,340);x.moveTo(0,C);x.lineTo(C-24,C);x.moveTo(C+24,C);x.lineTo(340,C);x.stroke();x.setLineDash([]);
+ x.fillStyle='#cfd8de';
+ x.fillRect(C,C-SL-2,24,2);x.fillRect(C-24,C+SL,24,2);x.fillRect(C+SL,C,2,24);x.fillRect(C-SL-2,C-24,2,24);
+ for(var l=0;l<4;l++)s.lanes[l].forEach(function(v){
+  var r=xy(l,v);x.fillStyle=v.t.c;x.fillRect(r[0],r[1],r[2],r[3]);
+  if(v.amb){x.strokeStyle='#d6343a';x.lineWidth=2;x.strokeRect(r[0],r[1],r[2],r[3])}
+  if(s.ad&&v.pos>SL&&v.pos<SL+150){x.strokeStyle='#37c57a';x.lineWidth=1;x.strokeRect(r[0]-1.5,r[1]-1.5,r[2]+3,r[3]+3)}
+ });
+ if(s.ad)for(var k2=0;k2<4;k2++){var e2=ext(s,k2);TH.forEach(function(t){var pp=SL+t,o=[[C+29,C-pp],[C-29,C+pp],[C+pp,C+29],[C-pp,C-29]][k2];x.fillStyle=e2>=t?'#37c57a':'#4a5864';x.beginPath();x.arc(o[0],o[1],3.5,0,6.283);x.fill()})}
+ var sg=[[C+11,C-SL-8],[C-11,C+SL+8],[C+SL+8,C+11],[C-SL-8,C-11]];
+ for(var k=0;k<4;k++){var c='#d6343a';if(inPh(s,k)){if(s.st==='g')c='#37c57a';else if(s.st==='y')c='#f2b52a'}
+  x.fillStyle=c;x.beginPath();x.arc(sg[k][0],sg[k][1],5,0,6.283);x.fill()}
+}
+function stats(s){var n=0,w=0;s.lanes.forEach(function(L){L.forEach(function(v){n++;w+=v.w})});return{avg:(s.wsum+w)/Math.max(1,s.done+n),done:s.done,q:q(s,0)+q(s,1)}}
+function fmt(id,v){document.getElementById(id).textContent=v}
+function con(){
+ var z=[0,0,0,0],mx=[0,0,0,0,0],tot=0,st=B;
+ st.lanes.forEach(function(L,l){L.forEach(function(v){if(v.pos>SL&&v.pos<SL+150&&!v.amb){z[l]+=v.t.pcu;mx[T.indexOf(v.t)]++}})});
+ z.forEach(function(n){tot+=n});
+ var sc=[0,1,2,3].map(function(l){return cnt(st,l)}),mxs=Math.max.apply(null,sc);
+ var d=document.getElementById('dn'),lv=mxs<=1?['LOW','']:mxs===2?['MEDIUM','m']:['HIGH','h'];
+ d.textContent=lv[0];d.className='bd '+lv[1];
+ fmt('tq',tot.toFixed(1)+' PCU');fmt('aq',sc.join(' / '));fmt('ga',st.alloc+'s');
+ var nm=['two-wheelers','autos','cars','buses','trucks'],t=[];mx.forEach(function(n,i){if(n)t.push(n+' '+nm[i])});fmt('mx',t.length?t.join(', '):'none');
+ document.getElementById('lr').className=st.st==='r'?'on':'';document.getElementById('ly').className=st.st==='y'?'on':'';document.getElementById('lg').className=st.st==='g'?'on':'';
+ fmt('tm',Math.max(0,Math.ceil((st.st==='g'?st.alloc:st.st==='y'?2:1.5)-st.el))+'s');
+ fmt('ph',(st.ph===0?'North-South':'East-West')+(st.st==='g'?' green':st.st==='y'?' amber':' all-red clearance')+(st.pre!==null?' (emergency override)':''));
+ if(emgName){fmt('es',(A.ambW!==null&&B.ambW!==null)?'Ambulance from the '+emgName+' waited '+A.ambW.toFixed(1)+'s on the fixed timer and '+B.ambW.toFixed(1)+'s on SmartChowk.':'RF signal received from the '+emgName+' approach. Green corridor requested...')}else fmt('es','')
+}
+function upd(){
+ con();var a=stats(A),b=stats(B);
+ fmt('w1',a.avg.toFixed(1)+'s');fmt('w2',b.avg.toFixed(1)+'s');fmt('d1',a.done);fmt('d2',b.done);fmt('q1',a.q.toFixed(1));fmt('q2',b.q.toFixed(1));
+ var v=document.getElementById('vd');
+ if(a.done<25||b.done<25){v.textContent='Collecting data...';return}
+ var d=(a.avg-b.avg)/a.avg*100;
+ v.textContent=d>=0?'Adaptive control is cutting average wait by '+d.toFixed(0)+'% in this run.':'At this volume the two plans are about even. Try raising volume or the east-west share.';
+}
+var den=document.getElementById('dens'),ewr=document.getElementById('ew');
+den.oninput=function(){fmt('o1',den.value)};ewr.oninput=function(){fmt('o2',ewr.value+'%')};
+document.getElementById('rst').onclick=reset;
+document.querySelectorAll('#spd button').forEach(function(b){b.onclick=function(){speed=+b.dataset.s;document.querySelectorAll('#spd button').forEach(function(o){o.setAttribute('aria-pressed',o===b)})}});
+function pick(){var r=Math.random(),c=0;for(var i=0;i<T.length;i++){c+=T[i].p;if(r<c)return T[i]}return T[2]}
+var acc=0,last=0,tu=0,emg=null,emgName=null;
+document.getElementById('emg').onclick=function(){emg=Math.floor(Math.random()*4)};
+function loop(t){
+ var dt=Math.min((t-last)/1000,.1);last=t;acc+=dt*speed;
+ var lam=.06*den.value,s=ewr.value/100,rates=[lam*2*(1-s),lam*2*(1-s),lam*2*s,lam*2*s];
+ while(acc>=H){acc-=H;var arr=[];if(emg!==null){arr.push([emg,AMB]);B.pre=emg<2?0:1;A.ambW=B.ambW=null;emgName=['North','South','East','West'][emg];emg=null}for(var l=0;l<4;l++)if(Math.random()<rates[l]*H)arr.push([l,pick()]);step(A,arr);step(B,arr)}
+ draw(A,ctx1);draw(B,ctx2);
+ if(t-tu>250){tu=t;upd()}
+ requestAnimationFrame(loop)
+}
+reset();requestAnimationFrame(function(t){last=t;loop(t)});
+})();
+</script>
+</body>
+</html>
